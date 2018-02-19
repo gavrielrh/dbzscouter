@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">DBZScouter</string>
+    <string name="ui_view_description">UI Elements</string>
 </resources>

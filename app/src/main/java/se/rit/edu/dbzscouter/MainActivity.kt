@@ -1,19 +1,58 @@
+@file:Suppress("DEPRECATION")
+
 package se.rit.edu.dbzscouter
 
-import android.graphics.Typeface
-import android.support.v7.app.AppCompatActivity
+import android.content.res.Configuration
+import android.hardware.Camera
 import android.os.Bundle
-import android.widget.TextView
+import android.support.v7.app.AppCompatActivity
+import android.widget.FrameLayout
+import android.widget.ImageView
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var camera: Camera
+    internal lateinit var layout: FrameLayout
+    private lateinit var ui: ImageView
+    private lateinit var cameraView: CameraView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
 
-        // You can get rid of this, but it does prove that our font works!
-        val tv = findViewById<TextView>(R.id.hello_text)
-        val face = Typeface.createFromAsset(assets, "fonts/Square.ttf")
-        tv.typeface = face
+        camera = turnOnCamera()
+        cameraView = CameraView(this, camera)
+
+        layout = findViewById(R.id.camera_view)
+        layout.addView(cameraView, 0)
+
+        ui = findViewById(R.id.ui_view)
+
+        ui = UIView(this)
+
+        layout.addView(ui)
+    }
+
+    /**
+     * Opens up the camera and sets its orientation based on the phone's orientation
+     *
+     * @return the newly created camera
+     */
+    private fun turnOnCamera(): Camera {
+        val camera = Camera.open()
+
+        val parameters = camera.parameters
+
+        if (this.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) {
+            parameters.set("orientation", "portrait")
+            camera.setDisplayOrientation(90)
+            parameters.setRotation(90)
+        } else {
+            parameters.set("orientation", "landscape")
+            camera.setDisplayOrientation(0)
+            parameters.setRotation(0)
+        }
+
+        return camera
     }
 }
