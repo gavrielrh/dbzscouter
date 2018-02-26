@@ -33,16 +33,16 @@ class MicRecorder : AudioRecord {
      * @return the current decibles
      */
     fun getDecibles() : Double{
-        var shortBuffer = ShortArray(1024)
-        this.read(shortBuffer, 0, 1024)
-        var p2 : Double = shortBuffer[shortBuffer.lastIndex].toDouble()
+        var shortBuffer = ShortArray(44100) // want to pull at the 44100th byte sampling in HZ.
+        this.read(shortBuffer, 0, 44100)
+        var sample : Double = shortBuffer[shortBuffer.lastIndex].toDouble()
 
         val decibel: Double
 
-        if (p2 == 0.0)
+        if (sample == 0.0)
             decibel = java.lang.Double.NEGATIVE_INFINITY
         else
-            decibel = 20.0 * Math.log10(p2 / 65535.0)
+            decibel = 20.0 * Math.log10(sample / 65535.0)
 
         return decibel
     }
