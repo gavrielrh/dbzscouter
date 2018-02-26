@@ -14,6 +14,7 @@ class MainActivity : AppCompatActivity() {
     internal lateinit var layout: FrameLayout
     private lateinit var ui: ImageView
     private lateinit var cameraView: CameraView
+    private lateinit var micRecorder: MicRecorder
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +30,9 @@ class MainActivity : AppCompatActivity() {
         ui = findViewById(R.id.ui_view)
 
         ui = UIView(this)
+
+        micRecorder = MicRecorder()
+        turnOnMic()
 
         layout.addView(ui)
     }
@@ -54,5 +58,13 @@ class MainActivity : AppCompatActivity() {
         }
 
         return camera
+    }
+
+    private fun turnOnMic() {
+         micRecorder.startRecording()
+    }
+
+    private fun turnOffMic(){
+        micRecorder.close()
     }
 }
