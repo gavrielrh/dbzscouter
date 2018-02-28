@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
 
         layout.addView(ui)
 
-        // while(true){
+        //while(true){
         // System.err.println("Decibels: " + micRecorder.getDecibles())
         //}
     }
