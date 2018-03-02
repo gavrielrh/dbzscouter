@@ -61,21 +61,28 @@ class MicRecorder: Runnable {
             val avg = decibleConv(shortBuffer.average())!!
             averageMin = (averageMin + min) / 2
             averageMax = (averageMax + max) / 2
-            soundLevel = (avg - averageMin) / (averageMax - averageMin)
 
+            if(averageMax == averageMin) {
+                soundLevel = 0.0
+            }
+            else {
+                soundLevel = (avg - averageMin) / (averageMax - averageMin)
+            }
             // De-Comment for Debugging
-            //System.err.println("Decibels: " + soundLevel)
+            System.err.format("Sound data: Min: %.3f Max: %.3f Avg: %.3f SoundLevel: %.3f\n", min, max, avg, soundLevel)
 
             // Don't eat all the CPU, this is a phone after all
             Thread.sleep(5)
         }
-
         recorder.stop()
-        recorder.release()
     }
 
     private fun decibleConv(sample: Double?): Double? {
         sample ?: return null
+        if(sample == 0.0) {
+            return Double.NEGATIVE_INFINITY
+        }
+
         return 20.0 * Math.log10(sample / 65535.0)
     }
 }
