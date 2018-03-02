@@ -3,9 +3,8 @@ package se.rit.edu.dbzscouter
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.R.attr.data
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
-import java.util.stream.DoubleStream
 
 
 /**
@@ -13,7 +12,7 @@ import java.util.stream.DoubleStream
  * @author Curtis Shea
  * Date of Creation: 2/23/18
  */
-class MicRecorder : AudioRecord {
+class MicRecorder: Runnable {
     companion object {
         @JvmStatic val SAMPLE_RATE = 44100;
     }
@@ -23,41 +22,60 @@ class MicRecorder : AudioRecord {
         get() = java.lang.Double.longBitsToDouble(soundLevelData.get())
         set(value) { soundLevelData.set(java.lang.Double.doubleToRawLongBits(value)) }
 
-    // Constructor, sets up super using:
-    // audio source from mic
-    // in 44100 HZ, works for every device
-    // channel config MONO, works on all devices
-    // audio format as 16 bit short
-    // buffer size in bytes
-    constructor() : super(MediaRecorder.AudioSource.DEFAULT,
-                          SAMPLE_RATE,
-                          AudioFormat.CHANNEL_IN_MONO,
-                          AudioFormat.ENCODING_PCM_16BIT,
-                          AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)){
+    private val runningData = AtomicBoolean(false)
+    public var running: Boolean
+        get() = runningData.get()
+        set(value) { runningData.set(value) }
 
-    }
+    private val bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT);
 
     /**
-     * Get the current decibles from the recorder
-     * @return the current decibles
+     * Recorder which reads from the mic
+     * in 44100 HZ, works for every device
+     * channel config MONO, works on all devices
+     * audio format as 16 bit short
+     * buffer size in bytes
      */
-    fun getDecibles() : Double{
-        val shortBuffer = ShortArray(AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)) // want to pull at the 44100th byte sampling in HZ.
-        this.read(shortBuffer, 0, shortBuffer.size)
-        val sample : Double = shortBuffer.max()?.toDouble() ?: Double.NEGATIVE_INFINITY
-        soundLevel = if (sample == 0.0) {
-            Double.NEGATIVE_INFINITY
-        } else {
-            20.0 * Math.log10(sample / 65535.0)
+    private val recorder = AudioRecord(
+            MediaRecorder.AudioSource.DEFAULT,
+            SAMPLE_RATE,
+            AudioFormat.CHANNEL_IN_MONO,
+            AudioFormat.ENCODING_PCM_16BIT,
+            bufferSize)
+
+    /**
+     * Run the audio listener thread.
+     */
+    override fun run() {
+        recorder.startRecording()
+
+        val shortBuffer = ShortArray(bufferSize)
+        var averageMin = 0.0
+        var averageMax = 0.0
+        running = true
+        while (running) {
+            recorder.read(shortBuffer, 0, shortBuffer.size)
+            val min = decibleConv(shortBuffer.min()?.toDouble()) ?: averageMin
+            val max = decibleConv(shortBuffer.max()?.toDouble()) ?: averageMax
+            val avg = decibleConv(shortBuffer.average())!!
+            averageMin = (averageMin + min) / 2
+            averageMax = (averageMax + max) / 2
+            soundLevel = (avg - averageMin) / (averageMax - averageMin)
+
+            // De-Comment for Debugging
+            //System.err.println("Decibels: " + soundLevel)
+
+            // Don't eat all the CPU, this is a phone after all
+            Thread.sleep(5)
         }
-        return soundLevel
+
+        recorder.stop()
+        recorder.release()
     }
 
-    /**
-     * Performs functions to close the mic.
-     */
-    fun close(){
-        this.stop()
-        this.release()
+    private fun decibleConv(sample: Double?): Double? {
+        sample ?: return null
+        return 20.0 * Math.log10(sample / 65535.0)
     }
 }

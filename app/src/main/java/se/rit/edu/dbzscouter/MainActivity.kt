@@ -32,13 +32,19 @@ class MainActivity : AppCompatActivity() {
         ui = UIView(this)
 
         micRecorder = MicRecorder()
-        turnOnMic()
+        Thread(micRecorder).start()
 
         layout.addView(ui)
+    }
 
-        //while(true){
-        // System.err.println("Decibels: " + micRecorder.getDecibles())
-        //}
+    override fun onPause() {
+        super.onPause()
+        micRecorder.running = false
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Thread(micRecorder).start()
     }
 
     /**
@@ -62,13 +68,5 @@ class MainActivity : AppCompatActivity() {
         }
 
         return camera
-    }
-
-    private fun turnOnMic() {
-         micRecorder.startRecording()
-    }
-
-    private fun turnOffMic(){
-        micRecorder.close()
     }
 }
