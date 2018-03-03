@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/topLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:keepScreenOn="true"
     tools:context="se.rit.edu.dbzscouter.MainActivity">
 
-    <FrameLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/camera_view">
+    <se.rit.edu.dbzscouter.ui.camera.CameraSourcePreview
+        android:id="@+id/cameraPreview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
         <ImageView
             android:id="@+id/ui_view"
@@ -17,6 +19,11 @@
             android:layout_height="match_parent"
             android:contentDescription="@string/ui_view_description"
             android:scaleType="matrix" />
-    </FrameLayout>
+
+        <se.rit.edu.dbzscouter.ui.camera.GraphicOverlay
+            android:id="@+id/faceOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </se.rit.edu.dbzscouter.ui.camera.CameraSourcePreview>
 
 </android.support.constraint.ConstraintLayout>

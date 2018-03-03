@@ -6,7 +6,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import java.io.ByteArrayOutputStream
 
-
 class UIView(context: Context) : android.support.v7.widget.AppCompatImageView(context) {
     private var scouterOverlay: Bitmap = BitmapFactory.decodeResource(resources, R.drawable.scouteroverlay)
     private var topPosition = 0f
