@@ -17,16 +17,26 @@ class MicRecorder: Runnable {
         @JvmStatic val SAMPLE_RATE = 44100;
     }
 
+    // the current decibel reading
     private val soundLevelData = AtomicLong()
     var soundLevel: Double
         get() = java.lang.Double.longBitsToDouble(soundLevelData.get())
         set(value) { soundLevelData.set(java.lang.Double.doubleToRawLongBits(value)) }
 
+    // the current minimum value sound level has ever had
+    private val minSoundLevelData = AtomicLong()
+    var minSoundLevel: Double
+        get() = java.lang.Double.longBitsToDouble(minSoundLevelData.get())
+        set(value) { minSoundLevelData.set(java.lang.Double.doubleToRawLongBits(value)) }
+
+
+    // whether or not the thread should keep running
     private val runningData = AtomicBoolean(false)
     public var running: Boolean
         get() = runningData.get()
         set(value) { runningData.set(value) }
 
+    // the buffersize to read audio data to
     private val bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT);
 
@@ -53,7 +63,9 @@ class MicRecorder: Runnable {
         val shortBuffer = ShortArray(bufferSize)
         var averageMin = 0.0
         var averageMax = 0.0
+
         running = true
+
 
         while (running) {
             recorder.read(shortBuffer, 0, shortBuffer.size)
@@ -70,9 +82,15 @@ class MicRecorder: Runnable {
 
             soundLevel = averageMax
 
+            if(soundLevel < minSoundLevel ){
+                minSoundLevel = soundLevel
+            }else if(minSoundLevel == 0.0){
+                minSoundLevel = soundLevel
+            }
+
             // De-Comment for Debugging
             //System.err.format("Sound data: Min: %.3f Max: %.3f Avg: %.3f SoundLevel: %.3f\n", min, max, avg, soundLevel)
-            System.err.format("Sound data: Decibels: %.3f\n", soundLevel)
+            //System.err.format("Sound data: Decibels: %.3f Minimum: %.3f \n", soundLevel, minSoundLevel)
 
 
             // Don't eat all the CPU, this is a phone after all
@@ -91,5 +109,12 @@ class MicRecorder: Runnable {
         }
 
         return 20.0 * Math.log10(sample / 65535.0)
+    }
+
+    /**
+     * Used to retrieve the number of decibels above the minimum recorded decibel level
+     */
+    fun getNumDecibelsAboveMin() : Double?{
+        return soundLevel - minSoundLevel
     }
 }
