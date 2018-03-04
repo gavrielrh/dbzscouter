@@ -54,22 +54,26 @@ class MicRecorder: Runnable {
         var averageMin = 0.0
         var averageMax = 0.0
         running = true
+
         while (running) {
             recorder.read(shortBuffer, 0, shortBuffer.size)
-            val min = decibleConv(shortBuffer.min()?.toDouble()) ?: averageMin
+
+            // TODO Geting NaN for min and average, which is throwing everything off
+            // val min = decibleConv(shortBuffer.min()?.toDouble()) ?: averageMin
             val max = decibleConv(shortBuffer.max()?.toDouble()) ?: averageMax
-            val avg = decibleConv(shortBuffer.average())!!
-            averageMin = (averageMin + min) / 2
+            // val avg = decibleConv(shortBuffer.average())!!
+
+            // averageMin = (averageMin + min) / 2
             averageMax = (averageMax + max) / 2
 
-            if(averageMax == averageMin) {
-                soundLevel = 0.0
-            }
-            else {
-                soundLevel = (avg - averageMin) / (averageMax - averageMin)
-            }
+            // soundLevel = (avg - averageMin) / ( averageMax - averageMin)
+
+            soundLevel = averageMax
+
             // De-Comment for Debugging
-            System.err.format("Sound data: Min: %.3f Max: %.3f Avg: %.3f SoundLevel: %.3f\n", min, max, avg, soundLevel)
+            //System.err.format("Sound data: Min: %.3f Max: %.3f Avg: %.3f SoundLevel: %.3f\n", min, max, avg, soundLevel)
+            System.err.format("Sound data: Decibels: %.3f\n", soundLevel)
+
 
             // Don't eat all the CPU, this is a phone after all
             Thread.sleep(5)
@@ -77,6 +81,9 @@ class MicRecorder: Runnable {
         recorder.stop()
     }
 
+    /**
+     * Used to convert short values to decibels
+     */
     private fun decibleConv(sample: Double?): Double? {
         sample ?: return null
         if(sample == 0.0) {
