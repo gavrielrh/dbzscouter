@@ -90,7 +90,7 @@ class MicRecorder: Runnable {
 
             // De-Comment for Debugging
             //System.err.format("Sound data: Min: %.3f Max: %.3f Avg: %.3f SoundLevel: %.3f\n", min, max, avg, soundLevel)
-            //System.err.format("Sound data: Decibels: %.3f Minimum: %.3f \n", soundLevel, minSoundLevel)
+            System.err.format("Sound data: Decibels: %.3f Minimum: %.3f \n", soundLevel, minSoundLevel)
 
 
             // Don't eat all the CPU, this is a phone after all
@@ -104,8 +104,11 @@ class MicRecorder: Runnable {
      */
     private fun decibleConv(sample: Double?): Double? {
         sample ?: return null
+
+        // should be negative infinity, but that causes problems.
+        // and if the max is 0, we've probably got bad data
         if(sample == 0.0) {
-            return Double.NEGATIVE_INFINITY
+            return soundLevel
         }
 
         return 20.0 * Math.log10(sample / 65535.0)

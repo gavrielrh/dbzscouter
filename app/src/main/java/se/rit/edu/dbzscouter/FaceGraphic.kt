@@ -21,8 +21,8 @@ internal class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : Gra
     private var mFaceId: Int = 0
     private val mFaceHappiness: Float = 0.toFloat()
     private val mFont: Typeface = Typeface.createFromAsset(resources.assets, "fonts/Square.ttf")
-
     private var faceGraphic: Bitmap
+    private var powerLevel : PowerLevel?  = null
 
     init {
 
@@ -49,6 +49,10 @@ internal class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : Gra
         mFaceId = id
     }
 
+    fun setPowerLevel(powerLevel: PowerLevel){
+        this.powerLevel = powerLevel
+        powerLevel.setFaceGraphic(this)
+    }
 
     /**
      * Updates the face instance from the detection of the most recent frame.  Invalidates the
@@ -74,8 +78,15 @@ internal class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : Gra
         val faceGraphicTop = y + ID_Y_OFFSET - faceGraphic.height / 2
         canvas.drawBitmap(faceGraphic, faceGraphicLeft, faceGraphicTop, null)
 
-        val powerLevel = (9000 * (1 - face.isSmilingProbability)).toInt() //TODO: this is where the magic happens, we need to incorporate sound
+        powerLevel?.calculatePowerLevel()
+
         canvas.drawText(String.format("%d", powerLevel), x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint)
+    }
+
+    fun getEmotionVal() : Double{
+        val face = mFace ?: return 0.0
+
+        return (1 - face.isSmilingProbability).toDouble()
     }
 
     companion object {

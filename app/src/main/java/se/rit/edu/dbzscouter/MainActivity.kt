@@ -56,6 +56,12 @@ class MainActivity : AppCompatActivity() {
         } else {
             loadMicrophone()
         }
+
+        val powerLevel = PowerLevel(micRecorder)
+
+        // TODO fix this so that that happens. I just need to set power level
+        val graphicFaceTracker = (faceOverlay as GraphicFaceTracker?)
+        graphicFaceTracker!!.setFaceGraphicPowerLevel(powerLevel)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -168,6 +174,14 @@ class MainActivity : AppCompatActivity() {
             if (face != null) {
                 mFaceGraphic.updateFace(face)
             }
+        }
+
+        fun getFaceGraphic() : FaceGraphic{
+            return mFaceGraphic
+        }
+
+        fun setFaceGraphicPowerLevel(powerLevel: PowerLevel){
+            mFaceGraphic.setPowerLevel(powerLevel)
         }
 
         /**
