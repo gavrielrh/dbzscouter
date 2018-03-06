@@ -33,6 +33,7 @@ class MainActivity : AppCompatActivity() {
     private var faceOverlay: GraphicOverlay? = null
     private var uiView: ImageView? = null
 
+    private lateinit var powerLevel : PowerLevel
     private lateinit var micRecorder: MicRecorder
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,22 +47,20 @@ class MainActivity : AppCompatActivity() {
 
         faceOverlay = findViewById(R.id.faceOverlay)
 
-        if (ActivityCompat.checkSelfPermission(this, CAMERA) != PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(CAMERA), CAMERA_CODE)
-        } else {
-            createCameraSource()
-        }
+
         if (ActivityCompat.checkSelfPermission(this, RECORD_AUDIO) != PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(RECORD_AUDIO), RECORD_AUDIO_CODE)
         } else {
             loadMicrophone()
         }
 
-        val powerLevel = PowerLevel(micRecorder)
+        powerLevel = PowerLevel(micRecorder)
 
-        // TODO fix this so that that happens. I just need to set power level
-        val graphicFaceTracker = (faceOverlay as GraphicFaceTracker?)
-        graphicFaceTracker!!.setFaceGraphicPowerLevel(powerLevel)
+        if (ActivityCompat.checkSelfPermission(this, CAMERA) != PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(CAMERA), CAMERA_CODE)
+        } else {
+            createCameraSource()
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -93,7 +92,7 @@ class MainActivity : AppCompatActivity() {
                 .build()
 
         detector.setProcessor(
-                MultiProcessor.Builder(GraphicFaceTrackerFactory())
+                MultiProcessor.Builder(GraphicFaceTrackerFactory(powerLevel))
                         .build())
 
         if (!detector.isOperational) {
@@ -146,9 +145,12 @@ class MainActivity : AppCompatActivity() {
      * Factory for creating a face tracker to be associated with a new face.  The multiprocessor
      * uses this factory to create face trackers as needed -- one for each individual.
      */
-    private inner class GraphicFaceTrackerFactory : MultiProcessor.Factory<Face> {
+    private inner class GraphicFaceTrackerFactory internal constructor(private val powerLevel: PowerLevel) : MultiProcessor.Factory<Face> {
+
         override fun create(face: Face): Tracker<Face> {
-            return GraphicFaceTracker(faceOverlay)
+            val mGraphic = GraphicFaceTracker(faceOverlay)
+            mGraphic.setFaceGraphicPowerLevel(powerLevel)
+            return mGraphic
         }
     }
 
@@ -174,10 +176,6 @@ class MainActivity : AppCompatActivity() {
             if (face != null) {
                 mFaceGraphic.updateFace(face)
             }
-        }
-
-        fun getFaceGraphic() : FaceGraphic{
-            return mFaceGraphic
         }
 
         fun setFaceGraphicPowerLevel(powerLevel: PowerLevel){

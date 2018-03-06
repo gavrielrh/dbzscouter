@@ -26,11 +26,8 @@ public class PowerLevel{
      * @return the power level
      */
     public int calculatePowerLevel(){
-        Random rand = new Random();
+        int powerLevel = 2500;
 
-        int powerLevel = 0;
-
-        powerLevel += rand.nextInt(2500);
         powerLevel += micRecorder.getNumDecibelsAboveMin() * DECIBEL_WEIGHT;
         powerLevel += (faceGraphic.getEmotionVal() * 100) * EMOTION_WEIGHT;
 
