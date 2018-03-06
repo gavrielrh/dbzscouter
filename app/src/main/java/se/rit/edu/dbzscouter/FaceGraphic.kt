@@ -80,7 +80,7 @@ internal class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : Gra
 
         powerLevel?.calculatePowerLevel()
 
-        canvas.drawText(String.format("%d", powerLevel), x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint)
+        canvas.drawText(String.format("%d", powerLevel!!.calculatePowerLevel()), x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint)
     }
 
     fun getEmotionVal() : Double{
