@@ -11,7 +11,7 @@ import java.io.ByteArrayOutputStream
  * Graphic instance for rendering face position, orientation, and landmarks within an associated
  * graphic overlay view.
  */
-internal class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverlay.Graphic(overlay!!) {
+class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverlay.Graphic(overlay!!) {
 
     private val mFacePositionPaint: Paint
     private val mIdPaint: Paint

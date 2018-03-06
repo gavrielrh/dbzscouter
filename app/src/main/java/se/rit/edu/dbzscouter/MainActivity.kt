@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContentView(R.layout.activity_main)
 
         cameraPreview = findViewById(R.id.cameraPreview)
@@ -107,8 +108,13 @@ class MainActivity : AppCompatActivity() {
             Log.w(TAG, "Face detector dependencies are not yet available.")
         }
 
+        val w = windowManager
+        val d = w.defaultDisplay
+        val width = d.width
+        val height = d.height
+
         cameraSource = CameraSource.Builder(context, detector)
-                .setRequestedPreviewSize(1920, 1080) //TODO: Make full screen, else this leaves an annoying gray bar on bottom/right
+                .setRequestedPreviewSize(height, width)
                 .setFacing(CameraSource.CAMERA_FACING_BACK)
                 .setRequestedFps(30.0f)
                 .build()

@@ -134,38 +134,11 @@ class CameraSourcePreview(private val mContext: Context, attrs: AttributeSet) : 
     }
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        var width = 320
-        var height = 240
-        if (mCameraSource != null) {
-            val size = mCameraSource!!.previewSize
-            if (size != null) {
-                width = size.width
-                height = size.height
-            }
-        }
-
-        // Swap width and height sizes when in portrait, since it will be rotated 90 degrees
-        if (isPortraitMode) {
-            val tmp = width
-            width = height
-            height = tmp
-        }
-
         val layoutWidth = right - left
         val layoutHeight = bottom - top
 
-        // Computes height and width for potentially doing fit width.
-        var childWidth = layoutWidth
-        var childHeight = (layoutWidth.toFloat() / width.toFloat() * height).toInt()
-
-        // If height is too tall using fit width, does fit height instead.
-        if (childHeight > layoutHeight) {
-            childHeight = layoutHeight
-            childWidth = (layoutHeight.toFloat() / height.toFloat() * width).toInt()
-        }
-
         for (i in 0 until childCount) {
-            getChildAt(i).layout(0, 0, childWidth, childHeight)
+            getChildAt(i).layout(0, 0, layoutWidth, layoutHeight)
         }
 
         try {
