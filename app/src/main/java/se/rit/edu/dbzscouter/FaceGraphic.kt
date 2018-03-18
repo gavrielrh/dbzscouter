@@ -43,7 +43,7 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
 
     fun setPowerLevel(powerLevel: PowerLevel){
         this.powerLevel = powerLevel
-        powerLevel.setFaceGraphic(this)
+        powerLevel.faceGraphic = this
     }
 
     /**

@@ -6,13 +6,29 @@ import android.media.MediaRecorder
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
+interface IMicRecorder: Runnable {
+    val decibelsAboveMin: Double
+    var running: Boolean
+}
+
+class DummyMicRecorder: IMicRecorder {
+    override val decibelsAboveMin: Double
+        get() = 0.0
+
+    override var running: Boolean
+        get() = false
+        set(value) {}
+
+    // Does nothing
+    override fun run() {}
+}
 
 /**
  * Used for getting decibels from the mic.
  * @author Curtis Shea
  * Date of Creation: 2/23/18
  */
-class MicRecorder: Runnable {
+class RealMicRecorder: IMicRecorder {
     companion object {
         @JvmStatic val SAMPLE_RATE = 44100;
     }
@@ -20,19 +36,24 @@ class MicRecorder: Runnable {
     // the current decibel reading
     private val soundLevelData = AtomicLong()
     var soundLevel: Double
-        get() = java.lang.Double.longBitsToDouble(soundLevelData.get())
-        set(value) { soundLevelData.set(java.lang.Double.doubleToRawLongBits(value)) }
+        get() = Double.fromBits(soundLevelData.get())
+        set(value) { soundLevelData.set(value.toBits()) }
 
     // the current minimum value sound level has ever had
     private val minSoundLevelData = AtomicLong()
     var minSoundLevel: Double
-        get() = java.lang.Double.longBitsToDouble(minSoundLevelData.get())
-        set(value) { minSoundLevelData.set(java.lang.Double.doubleToRawLongBits(value)) }
+        get() = Double.fromBits(minSoundLevelData.get())
+        set(value) { minSoundLevelData.set(value.toBits()) }
 
+    /**
+     * Used to retrieve the number of decibels above the minimum recorded decibel level
+     */
+    override val decibelsAboveMin: Double
+        get() = (soundLevel - minSoundLevel)
 
     // whether or not the thread should keep running
     private val runningData = AtomicBoolean(false)
-    public var running: Boolean
+    override var running: Boolean
         get() = runningData.get()
         set(value) { runningData.set(value) }
 
@@ -112,12 +133,5 @@ class MicRecorder: Runnable {
         }
 
         return 20.0 * Math.log10(sample / 65535.0)
-    }
-
-    /**
-     * Used to retrieve the number of decibels above the minimum recorded decibel level
-     */
-    fun getNumDecibelsAboveMin() : Double?{
-        return soundLevel - minSoundLevel
     }
 }

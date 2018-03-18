@@ -2,6 +2,7 @@
 
 package se.rit.edu.dbzscouter
 
+import android.Manifest
 import android.Manifest.permission.CAMERA
 import android.Manifest.permission.RECORD_AUDIO
 import android.os.Bundle
@@ -18,23 +19,34 @@ import com.google.android.gms.vision.MultiProcessor
 import com.google.android.gms.vision.Tracker
 import com.google.android.gms.vision.face.Face
 import com.google.android.gms.vision.face.FaceDetector
+import se.rit.edu.dbzscouter.storage.ReadingDatabase
 import se.rit.edu.dbzscouter.ui.camera.CameraSourcePreview
 import se.rit.edu.dbzscouter.ui.camera.GraphicOverlay
 import java.io.IOException
 
 
-const val CAMERA_CODE = 0x01
-const val RECORD_AUDIO_CODE = 0x02
-
 class MainActivity : AppCompatActivity() {
+
+    companion object {
+        private const val TAG = "FaceTracker"
+
+        private const val RC_HANDLE_GMS = 9001
+        // permission request codes need to be < 256
+        private const val RC_HANDLE_CAMERA_PERM = 2
+
+        const val CAMERA_CODE = 0x01
+        const val RECORD_AUDIO_CODE = 0x02
+        const val CAMERA_AUDIO_CODE = 0x03
+    }
 
     private var cameraSource: CameraSource? = null
     private var cameraPreview: CameraSourcePreview? = null
     private var faceOverlay: GraphicOverlay? = null
     private var uiView: ImageView? = null
+    private var powerLevel: PowerLevel? = null
 
-    private lateinit var powerLevel : PowerLevel
-    private lateinit var micRecorder: MicRecorder
+    private lateinit var micRecorder: IMicRecorder
+    private lateinit var readingDatabase: ReadingDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,42 +54,106 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         cameraPreview = findViewById(R.id.cameraPreview)
-
         uiView = UIView(this)
         cameraPreview!!.addView(uiView)
 
         faceOverlay = findViewById(R.id.faceOverlay)
 
+        // Initialize the reading database
+        readingDatabase = ReadingDatabase.getInstance(this)
 
-        if (ActivityCompat.checkSelfPermission(this, RECORD_AUDIO) != PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(RECORD_AUDIO), RECORD_AUDIO_CODE)
-        } else {
-            loadMicrophone()
+        // Determine our current permissions
+        val canCamera = hasPermission(Manifest.permission.CAMERA)
+        val canAudio = hasPermission(Manifest.permission.RECORD_AUDIO)
+
+        // Request permissions as necessary. For some reason requesting two permissions back-to-back
+        // is buggy, and so we request all the permissions at once.
+        // Also handle if they only have one or the other granted.
+        if (!canCamera && !canAudio) {
+            ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
+                    CAMERA_AUDIO_CODE)
+            micRecorder = DummyMicRecorder()
+        } else if (!canCamera) {
+            ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.CAMERA),
+                    CAMERA_CODE)
+        } else if (!canAudio) {
+            ActivityCompat.requestPermissions(this,
+                    arrayOf(Manifest.permission.RECORD_AUDIO),
+                    RECORD_AUDIO_CODE)
+            micRecorder = DummyMicRecorder()
         }
 
-        powerLevel = PowerLevel(micRecorder)
-
-        if (ActivityCompat.checkSelfPermission(this, CAMERA) != PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(CAMERA), CAMERA_CODE)
-        } else {
+        if (canAudio) {
+            loadMicrophone()
+        }
+        if (canCamera) {
             createCameraSource()
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>,
+                                            grantResults: IntArray) {
         when (requestCode) {
             CAMERA_CODE -> {
-                createCameraSource()
+                // For some reason it sends an empty grantResults on first run
+                if (isGranted(permissions, grantResults, Manifest.permission.CAMERA)) {
+                    createCameraSource()
+                    Log.i(TAG, "CAMERA permission granted")
+                } else {
+                    Log.i(TAG, "CAMERA permission denied")
+                }
             }
             RECORD_AUDIO_CODE -> {
-                loadMicrophone()
+                if (isGranted(permissions, grantResults, Manifest.permission.RECORD_AUDIO)) {
+                    loadMicrophone()
+                    Log.i(TAG, "MICROPHONE permission granted")
+                } else {
+                    Log.i(TAG, "MICROPHONE permission denied")
+                }
+            }
+            CAMERA_AUDIO_CODE -> {
+                onRequestPermissionsResult(RECORD_AUDIO_CODE, permissions, grantResults)
+                onRequestPermissionsResult(CAMERA_CODE, permissions, grantResults)
             }
         }
     }
 
+    /**
+     * Return true if all permissions from `required` are present in `permissions`
+     * and their grantResult is PERMISSION_GRANTED.
+     */
+    private fun isGranted(permissions: Array<out String>, grantResults: IntArray,
+                          vararg required: String): Boolean {
+        if (permissions.isEmpty()) {
+            return false
+        }
+        val requiredList = required.toMutableList()
+        for (i in 0 until permissions.size) {
+            if (permissions[i] in requiredList && grantResults[i] != PERMISSION_GRANTED) {
+                return false
+            } else {
+                requiredList.remove(permissions[i])
+            }
+        }
+        return requiredList.isEmpty()
+    }
+
+    private fun hasPermission(perm: String): Boolean {
+        return ActivityCompat.checkSelfPermission(this, perm) == PERMISSION_GRANTED
+    }
+
+    /**
+     * Initialize all microphone-related things. This can happen in several different places
+     * in the application (onCreate, onRequestPermissionResult, etc.).
+     */
     private fun loadMicrophone() {
-        micRecorder = MicRecorder()
-        Thread(micRecorder).start()
+        val rec = RealMicRecorder()
+        micRecorder = rec
+        // Update the micRecorder of the powerLevel
+        powerLevel?.micRecorder = rec
+        Thread(rec).start()
     }
 
     /**
@@ -87,13 +163,16 @@ class MainActivity : AppCompatActivity() {
      */
     private fun createCameraSource() {
 
+        // Initialize the powerLevel with the current micRecorder, be it Dummy or Real
+        powerLevel = PowerLevel(micRecorder)
+
         val context = applicationContext
         val detector = FaceDetector.Builder(context)
                 .setClassificationType(FaceDetector.ALL_CLASSIFICATIONS)
                 .build()
 
         detector.setProcessor(
-                MultiProcessor.Builder(GraphicFaceTrackerFactory(powerLevel))
+                MultiProcessor.Builder(GraphicFaceTrackerFactory(powerLevel!!))
                         .build())
 
         if (!detector.isOperational) {
@@ -223,13 +302,5 @@ class MainActivity : AppCompatActivity() {
         if (cameraSource != null) {
             cameraSource!!.release()
         }
-    }
-
-    companion object {
-        private const val TAG = "FaceTracker"
-
-        private const val RC_HANDLE_GMS = 9001
-        // permission request codes need to be < 256
-        private const val RC_HANDLE_CAMERA_PERM = 2
     }
 }
