@@ -2,27 +2,39 @@ package se.rit.edu.dbzscouter
 
 /**
  * Stores information relevant to the power level calculation
+ * @author Curtis Shea
+ * @author Gavriel Rachael-Homann
  */
 class PowerLevel(var micRecorder: IMicRecorder) {
 
-    var faceGraphic: FaceGraphic? = null
+    private var faceGraphic: FaceGraphic? = null
 
     /**
      * Calculates the power level
      * @return the power level
      */
     fun calculatePowerLevel(): Int {
-        var powerLevel = 0
+        var powerLevel = 0.0
 
-        powerLevel += (micRecorder.decibelsAboveMin * DECIBEL_WEIGHT).toInt()
-        powerLevel += (faceGraphic!!.getEmotionVal() * 100 * EMOTION_WEIGHT).toInt()
 
-        return powerLevel
+        // fluctuates between 0 and DECIBEL_WEIGHT percent of BASE_POWER_LEVEL, based on
+        // the decibels above min of MicRecorder
+        powerLevel += (((micRecorder.maxReasonableDecibels - micRecorder.decibelsAboveMin) / micRecorder.maxReasonableDecibels) * BASE_POWER_LEVEL * DECIBEL_WEIGHT) * 100
+
+        // fluctuates between 0 and EMOTION_WEIGHT percent of BASE_POWER_LEVEL, based on
+        // the emotion val of FaceGraphic
+        powerLevel += (faceGraphic!!.getEmotionVal() * BASE_POWER_LEVEL * EMOTION_WEIGHT) * 100
+
+        return powerLevel.toInt()
+    }
+
+    fun setFaceGraphic(faceGraphic: FaceGraphic){
+        this.faceGraphic = faceGraphic;
     }
 
     companion object {
-
-        private val EMOTION_WEIGHT = 50
-        private val DECIBEL_WEIGHT = 50
+        private val BASE_POWER_LEVEL = 150000000
+        private val EMOTION_WEIGHT = 0.6
+        private val DECIBEL_WEIGHT = 0.4
     }
 }

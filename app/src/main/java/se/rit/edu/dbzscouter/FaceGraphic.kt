@@ -43,7 +43,7 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
 
     fun setPowerLevel(powerLevel: PowerLevel){
         this.powerLevel = powerLevel
-        powerLevel.faceGraphic = this
+        powerLevel.setFaceGraphic(this)
     }
 
     /**
@@ -73,6 +73,7 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
 
         canvas.drawBitmap(scaledFaceGraphic, faceGraphicLeft, faceGraphicTop, null)
 
+        powerLevel?.setFaceGraphic(this)
         powerLevel?.calculatePowerLevel()
 
         canvas.drawText(String.format("%d", powerLevel!!.calculatePowerLevel()), x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint)

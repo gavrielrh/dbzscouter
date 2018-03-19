@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
 interface IMicRecorder: Runnable {
     val decibelsAboveMin: Double
     var running: Boolean
+    val maxReasonableDecibels : Double
 }
 
 class DummyMicRecorder: IMicRecorder {
@@ -21,11 +22,15 @@ class DummyMicRecorder: IMicRecorder {
 
     // Does nothing
     override fun run() {}
+
+    override val maxReasonableDecibels: Double
+        get() = 0.0
 }
 
 /**
  * Used for getting decibels from the mic.
  * @author Curtis Shea
+ * @author Drew Heintz
  * Date of Creation: 2/23/18
  */
 class RealMicRecorder: IMicRecorder {
@@ -134,4 +139,15 @@ class RealMicRecorder: IMicRecorder {
 
         return 20.0 * Math.log10(sample / 65535.0)
     }
+
+    /**
+     * Used to retrieve the maximum that we expect from a person
+     * 100 is around the noise of a speaker at max volume
+     * the subtraction of minSoundLevel accounts for the fact that we may not be starting
+     * at 0 due to the different ways sounds measure data, and also accounts for the differences
+     * between phones.
+     */
+    override val maxReasonableDecibels: Double
+        get() = 100 - minSoundLevel
+
 }
