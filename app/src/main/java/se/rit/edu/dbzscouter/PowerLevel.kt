@@ -15,15 +15,26 @@ class PowerLevel(var micRecorder: IMicRecorder) {
      */
     fun calculatePowerLevel(): Int {
         var powerLevel = 0.0
-
+        var powerLevelPercentage = 0.0
 
         // fluctuates between 0 and DECIBEL_WEIGHT percent of BASE_POWER_LEVEL, based on
         // the decibels above min of MicRecorder
-        powerLevel += (((micRecorder.maxReasonableDecibels - micRecorder.decibelsAboveMin) / micRecorder.maxReasonableDecibels) * BASE_POWER_LEVEL * DECIBEL_WEIGHT) * 100
+         var decibelPower = (((micRecorder.maxReasonableDecibels - micRecorder.decibelsAboveMin) / micRecorder.maxReasonableDecibels))
+
+
+        // if the amount decibels would contribute to the power level is less than the minimum threshold
+        // don't have it contribute to power level
+        if(decibelPower < MIN_DECIBEL_POWER_THRESHOLD){
+            decibelPower = 0.0
+        }
+
+        powerLevelPercentage += decibelPower * DECIBEL_WEIGHT
 
         // fluctuates between 0 and EMOTION_WEIGHT percent of BASE_POWER_LEVEL, based on
         // the emotion val of FaceGraphic
-        powerLevel += (faceGraphic!!.getEmotionVal() * BASE_POWER_LEVEL * EMOTION_WEIGHT) * 100
+        powerLevelPercentage += (faceGraphic!!.getEmotionVal() * EMOTION_WEIGHT)
+
+        powerLevel = BASE_POWER_LEVEL * Math.pow(powerLevelPercentage, POWER_EXP_CONST)
 
         return powerLevel.toInt()
     }
@@ -33,8 +44,10 @@ class PowerLevel(var micRecorder: IMicRecorder) {
     }
 
     companion object {
-        private val BASE_POWER_LEVEL = 150000000
+        private val BASE_POWER_LEVEL = 50000
+        private val POWER_EXP_CONST = 2.0
         private val EMOTION_WEIGHT = 0.6
         private val DECIBEL_WEIGHT = 0.4
+        private val MIN_DECIBEL_POWER_THRESHOLD = 0.3
     }
 }
