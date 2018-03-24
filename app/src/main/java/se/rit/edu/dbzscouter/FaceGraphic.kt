@@ -22,7 +22,7 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
     private val TEXT_SIZE = 80.0f
 
     private var reticle: Bitmap
-    private var hairstyles : HashMap<Int, Bitmap>
+    private var hairstyles : HashMap<Int, Int>
     private var rankings : HashMap<Int, String>
 
     private var powerLevel : PowerLevel? = null
@@ -32,6 +32,7 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
     private val hairYOffsetFraction = .8f
     private val hairWidthExtra = 200
     private val reticleWidthHeightExtra = 200
+    private val res = resources
 
 
     init {
@@ -47,15 +48,15 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
 
         reticle = lessResolution(resources, R.drawable.faceoverlay)
         hairstyles = hashMapOf(
-                12 to lessResolution(resources, R.drawable.ssn),
-                13 to lessResolution(resources, R.drawable.ss1),
-                14 to lessResolution(resources, R.drawable.ss2),
-                15 to lessResolution(resources, R.drawable.ss3),
-                16 to lessResolution(resources, R.drawable.ss4),
-                17 to lessResolution(resources, R.drawable.ssr),
-                18 to lessResolution(resources, R.drawable.ssb),
-                19 to lessResolution(resources, R.drawable.ssro),
-                20 to lessResolution(resources, R.drawable.ssg)
+                12 to R.drawable.ssn,
+                13 to R.drawable.ss1,
+                14 to R.drawable.ss2,
+                15 to R.drawable.ss3,
+                16 to R.drawable.ss4,
+                17 to R.drawable.ssr,
+                18 to R.drawable.ssb,
+                19 to R.drawable.ssro,
+                20 to R.drawable.ssg
         )
         rankings = hashMapOf(
                 0 to "Baby",
@@ -109,27 +110,31 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
         val faceCenterX = translateX(face.position.x + face.width / 2)
         val faceCenterY = translateY(face.position.y + face.height / 2)
 
-        val scaledReticle = Bitmap.createScaledBitmap(reticle, face.height.toInt() + reticleWidthHeightExtra, face.height.toInt() + reticleWidthHeightExtra, false)
-        val reticleX = faceCenterX - scaledReticle.width / 2
-        val reticleY = faceCenterY + reticleYOffset - scaledReticle.height / 2
+        val reticleWidthHeight = face.height.toInt() + reticleWidthHeightExtra
+        val reticleX = faceCenterX - reticleWidthHeight / 2
+        val reticleY = faceCenterY + reticleYOffset - reticleWidthHeight / 2
+        val scaledReticle = Rect(reticleX.toInt(), reticleY.toInt(), reticleX.toInt() + reticleWidthHeight, reticleY.toInt() + reticleWidthHeight)
 
         powerLevel?.setFaceGraphic(this)
         val powerLevelNumber = powerLevel!!.calculatePowerLevel()
-        val powerLevelRank = rankings[powerLevelNumber / (powerLevel!!.getBasePowerLevel() / (rankings.size - 1))]
-        val hair = hairstyles[powerLevelNumber / (powerLevel!!.getBasePowerLevel() / (rankings.size - 1))]
+        val powerLevelRank = rankings[powerLevelNumber / (powerLevel!!.getMaxPowerLevel() / (rankings.size - 1))]
+        val hairId = hairstyles[powerLevelNumber / (powerLevel!!.getMaxPowerLevel() / (rankings.size - 1))]
 
         //Draw all bitmaps
-        if (hair != null) {
-            val hairWidth = scaledReticle.width + hairWidthExtra
+        if (hairId != null) {
+            val hair = lessResolution(res, hairId)
+            val hairWidth = scaledReticle.width() + hairWidthExtra
             val hairHeight = (hair.height * hairWidth) / hair.width
-            val scaledHairGraphic = Bitmap.createScaledBitmap(hair, hairWidth, hairHeight, false)
-            canvas.drawBitmap(scaledHairGraphic, faceCenterX - scaledHairGraphic.width / 2, faceCenterY - (scaledHairGraphic.height * hairYOffsetFraction), null)
+            val hairX = faceCenterX - hairWidth / 2
+            val hairY = faceCenterY - hairHeight * hairYOffsetFraction
+            val scaledHair= Rect(hairX.toInt(), hairY.toInt(), hairX.toInt() + hairWidth, hairY.toInt() + hairHeight)
+            canvas.drawBitmap(hair, Rect(0, 0, hair.width, hair.height), scaledHair, null)
         }
         if (powerLevelRank != null) {
-            canvas.drawText(powerLevelRank, faceCenterX - mIdPaint.measureText(powerLevelRank) / 2, reticleY + scaledReticle.height + rankYOffset, mIdPaint)
+            canvas.drawText(powerLevelRank, faceCenterX - mIdPaint.measureText(powerLevelRank) / 2, reticleY + scaledReticle.height() + rankYOffset, mIdPaint)
         }
         canvas.drawText(String.format("%d",powerLevelNumber), faceCenterX - mIdPaint.measureText(String.format("%d",powerLevelNumber)) / 2, reticleY, mIdPaint)
-        canvas.drawBitmap(scaledReticle, reticleX, reticleY, null)
+        canvas.drawBitmap(reticle, Rect(0, 0, reticle.width, reticle.height), scaledReticle, null)
     }
 
     fun getEmotionVal() : Double{
