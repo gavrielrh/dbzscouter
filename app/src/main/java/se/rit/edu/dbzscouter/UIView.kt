@@ -27,7 +27,6 @@ class UIView(context: Context) : android.support.v7.widget.AppCompatImageView(co
             options.inSampleSize = calculateInSampleSize(options, width, height)
             options.inJustDecodeBounds = false
 
-            //return BitmapFactory.decodeResource(res, resId, options)
             return Bitmap.createScaledBitmap(BitmapFactory.decodeResource(res, resId, options), width, height, false)
         }
 

@@ -40,14 +40,18 @@ class PowerLevel(var micRecorder: IMicRecorder) {
     }
 
     fun setFaceGraphic(faceGraphic: FaceGraphic){
-        this.faceGraphic = faceGraphic;
+        this.faceGraphic = faceGraphic
+    }
+
+    fun getBasePowerLevel() : Int{
+        return BASE_POWER_LEVEL
     }
 
     companion object {
         private val BASE_POWER_LEVEL = 50000
         private val POWER_EXP_CONST = 2.0
-        private val EMOTION_WEIGHT = 0.6
-        private val DECIBEL_WEIGHT = 0.4
+        private val EMOTION_WEIGHT = 0.9
+        private val DECIBEL_WEIGHT = 0.1
         private val MIN_DECIBEL_POWER_THRESHOLD = 0.3
     }
 }
