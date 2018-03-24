@@ -9,13 +9,15 @@ class PowerLevel(var micRecorder: IMicRecorder) {
 
     private var faceGraphic: FaceGraphic? = null
 
+    private var powerLevelPercentage = 0.0
+
     /**
      * Calculates the power level
      * @return the power level
      */
     fun calculatePowerLevel(): Int {
         var powerLevel = 0.0
-        var powerLevelPercentage = 0.0
+        powerLevelPercentage = 0.0
 
         // fluctuates between 0 and DECIBEL_WEIGHT of 1, based on
         // the decibels above min of MicRecorder
@@ -52,6 +54,14 @@ class PowerLevel(var micRecorder: IMicRecorder) {
 
     fun getMaxPowerLevel() : Int{
         return MAX_POWER_LEVEL
+    }
+
+    fun getPowerExpConst() : Double{
+        return POWER_EXP_CONST
+    }
+
+    fun getPowerLevelPercentage() : Double{
+        return powerLevelPercentage
     }
 
     companion object {

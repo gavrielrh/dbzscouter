@@ -3,6 +3,7 @@ package se.rit.edu.dbzscouter
 import android.annotation.SuppressLint
 import android.content.res.Resources
 import android.graphics.*
+import android.os.SystemClock
 import com.google.android.gms.vision.face.Face
 import se.rit.edu.dbzscouter.ui.camera.GraphicOverlay
 
@@ -33,7 +34,11 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
     private val hairWidthExtra = 200
     private val reticleWidthHeightExtra = 200
     private val res = resources
-
+    private var lastTimeChanged : Long = 0
+    private val MILISECS_BETWEEN_READS = 2000
+    private var powerLevelRank : String? = null
+    private var powerLevelNumber : Int? = null
+    private var hairId : Int? = null
 
     init {
         val selectedColor = Color.rgb(255, 214, 10)
@@ -115,14 +120,19 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
         val reticleY = faceCenterY + reticleYOffset - reticleWidthHeight / 2
         val scaledReticle = Rect(reticleX.toInt(), reticleY.toInt(), reticleX.toInt() + reticleWidthHeight, reticleY.toInt() + reticleWidthHeight)
 
-        powerLevel?.setFaceGraphic(this)
-        val powerLevelNumber = powerLevel!!.calculatePowerLevel()
-        val powerLevelRank = rankings[powerLevelNumber / (powerLevel!!.getMaxPowerLevel() / (rankings.size - 1))]
-        val hairId = hairstyles[powerLevelNumber / (powerLevel!!.getMaxPowerLevel() / (rankings.size - 1))]
+        if(SystemClock.uptimeMillis() - lastTimeChanged > MILISECS_BETWEEN_READS) {
+            powerLevel?.setFaceGraphic(this)
+            powerLevelNumber = powerLevel!!.calculatePowerLevel()
+            val rankNum = (rankings.size * powerLevel!!.getPowerLevelPercentage()).toInt()
+            System.err.println("RankNum: " + rankNum)
+            powerLevelRank = rankings[rankNum]
+            hairId = hairstyles[rankNum]
+            lastTimeChanged = SystemClock.uptimeMillis()
+        }
 
         //Draw all bitmaps
         if (hairId != null) {
-            val hair = lessResolution(res, hairId)
+            val hair = lessResolution(res, hairId!!)
             val hairWidth = scaledReticle.width() + hairWidthExtra
             val hairHeight = (hair.height * hairWidth) / hair.width
             val hairX = faceCenterX - hairWidth / 2
@@ -133,7 +143,9 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
         if (powerLevelRank != null) {
             canvas.drawText(powerLevelRank, faceCenterX - mIdPaint.measureText(powerLevelRank) / 2, reticleY + scaledReticle.height() + rankYOffset, mIdPaint)
         }
-        canvas.drawText(String.format("%d",powerLevelNumber), faceCenterX - mIdPaint.measureText(String.format("%d",powerLevelNumber)) / 2, reticleY, mIdPaint)
+        if(powerLevelNumber != null) {
+            canvas.drawText(String.format("%d", powerLevelNumber), faceCenterX - mIdPaint.measureText(String.format("%d", powerLevelNumber)) / 2, reticleY, mIdPaint)
+        }
         canvas.drawBitmap(reticle, Rect(0, 0, reticle.width, reticle.height), scaledReticle, null)
     }
 
