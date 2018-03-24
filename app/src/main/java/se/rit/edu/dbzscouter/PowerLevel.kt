@@ -41,6 +41,10 @@ class PowerLevel(var micRecorder: IMicRecorder) {
         // the emotion val of FaceGraphic
         powerLevelPercentage += (faceGraphic!!.getEmotionVal() * EMOTION_WEIGHT)
 
+        // TODO this should enver be needed, but it seems to be
+        if(powerLevelPercentage > 1.0){
+            powerLevelPercentage = 1.0
+        }
 
         // make the powerlevel an exponential curve, from 0 to 1.
         powerLevel = MAX_POWER_LEVEL * Math.pow(powerLevelPercentage, POWER_EXP_CONST)

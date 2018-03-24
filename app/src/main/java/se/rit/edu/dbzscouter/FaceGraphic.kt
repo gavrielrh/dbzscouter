@@ -123,7 +123,7 @@ class FaceGraphic(overlay: GraphicOverlay?, resources: Resources) : GraphicOverl
         if(SystemClock.uptimeMillis() - lastTimeChanged > MILISECS_BETWEEN_READS) {
             powerLevel?.setFaceGraphic(this)
             powerLevelNumber = powerLevel!!.calculatePowerLevel()
-            val rankNum = (rankings.size * powerLevel!!.getPowerLevelPercentage()).toInt()
+            val rankNum = ((rankings.size - 1) * powerLevel!!.getPowerLevelPercentage()).toInt()
             System.err.println("RankNum: " + rankNum)
             powerLevelRank = rankings[rankNum]
             hairId = hairstyles[rankNum]
