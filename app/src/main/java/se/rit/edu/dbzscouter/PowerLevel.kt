@@ -21,6 +21,10 @@ class PowerLevel(var micRecorder: IMicRecorder) {
         // the decibels above min of MicRecorder
          var decibelPower = (((micRecorder.maxReasonableDecibels - micRecorder.decibelsAboveMin) / micRecorder.maxReasonableDecibels))
 
+        // cap decibel power to 1
+        if(decibelPower > 1){
+            decibelPower = 1.0
+        }
 
         // if the amount decibels would contribute to the power level is less than the minimum threshold
         // don't have it contribute to power level
