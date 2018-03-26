@@ -5,7 +5,6 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import java.io.ByteArrayOutputStream
 
 class UIView(context: Context) : android.support.v7.widget.AppCompatImageView(context) {
     private var scouterOverlay: Bitmap = lessResolution(context, resources, R.drawable.scouteroverlay)

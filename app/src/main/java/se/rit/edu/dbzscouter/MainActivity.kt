@@ -3,14 +3,18 @@
 package se.rit.edu.dbzscouter
 
 import android.Manifest
-import android.Manifest.permission.CAMERA
-import android.Manifest.permission.RECORD_AUDIO
+import android.graphics.*
 import android.os.Bundle
+import android.os.Environment
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.PermissionChecker.PERMISSION_GRANTED
 import android.support.v7.app.AppCompatActivity
+import android.text.format.DateFormat
 import android.util.Log
+import android.view.MotionEvent
+import android.view.View
 import android.widget.ImageView
+import android.widget.Toast
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.vision.CameraSource
@@ -22,21 +26,24 @@ import com.google.android.gms.vision.face.FaceDetector
 import se.rit.edu.dbzscouter.storage.ReadingDatabase
 import se.rit.edu.dbzscouter.ui.camera.CameraSourcePreview
 import se.rit.edu.dbzscouter.ui.camera.GraphicOverlay
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
+import java.util.*
 
 
 class MainActivity : AppCompatActivity() {
 
     companion object {
-        private const val TAG = "FaceTracker"
+        private const val TAG = "DBZScouter"
 
         private const val RC_HANDLE_GMS = 9001
         // permission request codes need to be < 256
         private const val RC_HANDLE_CAMERA_PERM = 2
 
         const val CAMERA_CODE = 0x01
-        const val RECORD_AUDIO_CODE = 0x02
-        const val CAMERA_AUDIO_CODE = 0x03
+        const val AUDIO_CODE = 0x02
+        const val STORAGE_CODE = 0x04
     }
 
     private var cameraSource: CameraSource? = null
@@ -44,6 +51,9 @@ class MainActivity : AppCompatActivity() {
     private var faceOverlay: GraphicOverlay? = null
     private var uiView: ImageView? = null
     private var powerLevel: PowerLevel? = null
+    private var canSaveScreenshot = false
+
+    private var screenshotBitmap: Bitmap? = null
 
     private lateinit var micRecorder: IMicRecorder
     private lateinit var readingDatabase: ReadingDatabase
@@ -53,7 +63,8 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
-        cameraPreview = findViewById(R.id.cameraPreview)
+        val camView: CameraSourcePreview = findViewById(R.id.cameraPreview)
+        cameraPreview = camView
         uiView = UIView(this)
         cameraPreview!!.addView(uiView)
 
@@ -65,57 +76,127 @@ class MainActivity : AppCompatActivity() {
         // Determine our current permissions
         val canCamera = hasPermission(Manifest.permission.CAMERA)
         val canAudio = hasPermission(Manifest.permission.RECORD_AUDIO)
+        val canStorage = hasPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    && hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
 
         // Request permissions as necessary. For some reason requesting two permissions back-to-back
         // is buggy, and so we request all the permissions at once.
         // Also handle if they only have one or the other granted.
-        if (!canCamera && !canAudio) {
-            ActivityCompat.requestPermissions(this,
-                    arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO),
-                    CAMERA_AUDIO_CODE)
-            micRecorder = DummyMicRecorder()
-        } else if (!canCamera) {
-            ActivityCompat.requestPermissions(this,
-                    arrayOf(Manifest.permission.CAMERA),
-                    CAMERA_CODE)
-        } else if (!canAudio) {
-            ActivityCompat.requestPermissions(this,
-                    arrayOf(Manifest.permission.RECORD_AUDIO),
-                    RECORD_AUDIO_CODE)
-            micRecorder = DummyMicRecorder()
-        }
+        val permArray = mutableListOf<String>()
+        var permCode = 0
 
+        // Load the audio system
         if (canAudio) {
             loadMicrophone()
+        } else {
+            micRecorder = DummyMicRecorder()
+            permArray.add(Manifest.permission.RECORD_AUDIO)
+            permCode = permCode or AUDIO_CODE
         }
+
+        // Load the camera
         if (canCamera) {
             createCameraSource()
+        } else {
+            permArray.add(Manifest.permission.CAMERA)
+            permCode = permCode or CAMERA_CODE
+        }
+
+        // Check for external storage permissions
+        if (canStorage) {
+            canSaveScreenshot = true
+        } else {
+            permArray.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+            permArray.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            permCode = permCode or STORAGE_CODE
+        }
+
+        if (permCode != 0) {
+            ActivityCompat.requestPermissions(this, permArray.toTypedArray(), permCode)
+        }
+
+        // Add tap listener so we can save a screenshot
+        camView.setOnTouchListener(::tapHandler)
+    }
+
+
+    private fun tapHandler(view: View, event: MotionEvent): Boolean {
+        // Once the user is done pressing, do something
+        if (event.action == MotionEvent.ACTION_UP && canSaveScreenshot
+                && screenshotBitmap == null) {
+
+            // Get the current preview overlay
+            val camView = cameraPreview ?: return false
+            // create bitmap screen capture
+            camView.isDrawingCacheEnabled = true
+            screenshotBitmap = Bitmap.createBitmap(camView.drawingCache)
+            camView.isDrawingCacheEnabled = false
+
+            // Tell the camera to take a screen shot
+            cameraSource!!.takePicture(::shutterCallback, ::pictureCallback)
+        }
+        return true
+    }
+
+    private fun shutterCallback() {
+        Toast.makeText(this, "Saving screenshot...", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun pictureCallback(jpegData: ByteArray) {
+        // Grab the current overlay and then reset it back to null
+        val overlayBmp = screenshotBitmap ?: return
+        screenshotBitmap = null
+        // Load a bitmap from the jpeg data
+        val opts = BitmapFactory.Options()
+        opts.inMutable = true
+        val camera = BitmapFactory.decodeByteArray(jpegData, 0, jpegData.size, opts)
+        // Draw the overlay on top
+        val canvas = Canvas(camera)
+        val srcRect = Rect(0, 0, overlayBmp.width, overlayBmp.height)
+        val destRect = Rect(0, 0, camera.width, camera.height)
+        canvas.drawBitmap(overlayBmp, srcRect, destRect, null)
+
+        try {
+            // Actually save the bitmap
+            // image naming and path to include sd card appending name you choose for file
+            val nowText = DateFormat.format("yyyy-MM-dd_hh:mm:ss", Date())
+            val mPath = Environment.getExternalStorageDirectory().toString() + "/" + nowText + ".jpg"
+            val outputStream = FileOutputStream(mPath)
+            camera.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+            outputStream.close()
+        } catch (e: Throwable) {
+            // Several error may come out with file handling or DOM
+            e.printStackTrace()
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>,
                                             grantResults: IntArray) {
-        when (requestCode) {
-            CAMERA_CODE -> {
-                // For some reason it sends an empty grantResults on first run
-                if (isGranted(permissions, grantResults, Manifest.permission.CAMERA)) {
-                    createCameraSource()
-                    Log.i(TAG, "CAMERA permission granted")
-                } else {
-                    Log.i(TAG, "CAMERA permission denied")
-                }
+
+        if (requestCode and CAMERA_CODE != 0) {
+            // For some reason it sends an empty grantResults on first run
+            if (isGranted(permissions, grantResults, Manifest.permission.CAMERA)) {
+                createCameraSource()
+                Log.i(TAG, "CAMERA permission granted")
+            } else {
+                Log.i(TAG, "CAMERA permission denied")
             }
-            RECORD_AUDIO_CODE -> {
-                if (isGranted(permissions, grantResults, Manifest.permission.RECORD_AUDIO)) {
-                    loadMicrophone()
-                    Log.i(TAG, "MICROPHONE permission granted")
-                } else {
-                    Log.i(TAG, "MICROPHONE permission denied")
-                }
+        }
+        if (requestCode and AUDIO_CODE != 0) {
+            if (isGranted(permissions, grantResults, Manifest.permission.RECORD_AUDIO)) {
+                loadMicrophone()
+                Log.i(TAG, "MICROPHONE permission granted")
+            } else {
+                Log.i(TAG, "MICROPHONE permission denied")
             }
-            CAMERA_AUDIO_CODE -> {
-                onRequestPermissionsResult(RECORD_AUDIO_CODE, permissions, grantResults)
-                onRequestPermissionsResult(CAMERA_CODE, permissions, grantResults)
+        }
+        if (requestCode and STORAGE_CODE != 0) {
+            if (isGranted(permissions, grantResults, Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                canSaveScreenshot = true
+                Log.i(TAG, "EXTERNAL_STORAGE permission granted")
+            } else {
+                Log.i(TAG, "EXTERNAL_STORAGE permission denied")
             }
         }
     }
